@@ -59,16 +59,6 @@ def read_data_from_database(table_name):
         cursor.execute(f'SELECT * FROM {table_name}')
         return cursor.fetchall()
 
-# CSV出力
-def save_data_to_csv(data, filename):
-    try:
-        with open(filename, 'w', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file)
-            writer.writerow(['Date', 'Value'])  
-            writer.writerows(data)
-    except IOError as e:
-        print(f"IOError while writing to {filename}: {e}")
-
 # メインプログラム
 def main():
     create_database()
@@ -84,12 +74,6 @@ def main():
     temperature_data2, pressure_data2 = scrape_weather_data(url2)
     insert_data_into_database(temperature_data2, 'temperature')
     insert_data_into_database(pressure_data2, 'pressure')
-
-    # データベースからデータを取得してCSVファイルに保存
-    temperature_data = read_data_from_database('temperature')
-    pressure_data = read_data_from_database('pressure')
-    save_data_to_csv(temperature_data, 'temperature_data.csv')
-    save_data_to_csv(pressure_data, 'pressure_data.csv')
 
 if __name__ == "__main__":
     main()
