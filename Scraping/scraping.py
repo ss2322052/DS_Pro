@@ -1,12 +1,20 @@
 import requests
 from bs4 import BeautifulSoup
+import sqlite3
+import csv
 import re
+from datetime import datetime
 
+# スクレイピング
 def scrape_weather_data(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # HTTPエラーをチェック
+    except requests.RequestException as e:
+        print(f"Error during requests to {url} : {e}")
+        return [], []
 
-    # テーブルから気温と気圧のデータを取得
+    soup = BeautifulSoup(response.text, 'html.parser')
     data_rows = soup.find_all('tr', class_='mtx')
     
     temperature_data = []
@@ -23,104 +31,49 @@ def scrape_weather_data(url):
 
     return temperature_data, pressure_data
 
-# URLとデータを取得
-url1 = 'https://www.data.jma.go.jp/obd/stats/etrn/view/daily_s1.php?prec_no=44&block_no=47662&year=2023&month=12&day=&view=a2'
-url2 = 'https://www.data.jma.go.jp/obd/stats/etrn/view/daily_s1.php?prec_no=51&block_no=47636&year=2024&month=01&day=06&view=a1'
-
-temperature_data1, pressure_data1 = scrape_weather_data(url1)
-temperature_data2, pressure_data2 = scrape_weather_data(url2)
-
-# データを出力する関数
-def print_data(data, label):
-    print(f"{label}:")
-    for date, value in data:
-        print(f"{date}: {value}")
-
-# 出力
-print_data(temperature_data1, "1つ目のURLの気温")
-print_data(pressure_data1, "1つ目のURLの気圧")
-print_data(temperature_data2, "2つ目のURLの気温")
-print_data(pressure_data2, "2つ目のURLの気圧")
-
-
-import sqlite3
-
-
-# データベースを作成する関数
+# データベース
 def create_database():
-    conn = sqlite3.connect('weather_data.db')
-    cursor = conn.cursor()
+    with sqlite3.connect('weather_data.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS temperature (
+                date TEXT PRIMARY KEY,
+                temperature TEXT
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS pressure (
+                date TEXT PRIMARY KEY,
+                pressure TEXT
+            )
+        ''')
 
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS temperature (
-            date TEXT PRIMARY KEY,
-            temperature TEXT
-        )
-    ''')
-
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS pressure (
-            date TEXT PRIMARY KEY,
-            pressure TEXT
-        )
-    ''')
-
-    conn.commit()
-    conn.close()
-
-# データをデータベースに挿入する関数
 def insert_data_into_database(data, table_name):
-    conn = sqlite3.connect('weather_data.db')
-    cursor = conn.cursor()
-
-    cursor.executemany(f'INSERT OR IGNORE INTO {table_name} VALUES (?, ?)', data)
-
-    conn.commit()
-    conn.close()
-
-# データベースを作成
-create_database()
-
-# スクレイピングしたデータを挿入する（scrape_weather_data 関数は別途定義する必要があります）
-# 1つ目のURLからデータを取得
-url1 = 'https://www.data.jma.go.jp/obd/stats/etrn/view/daily_s1.php?prec_no=44&block_no=47662&year=2023&month=12&day=&view=a2'
-temperature_data1, pressure_data1 = scrape_weather_data(url1)
-
-# 2つ目のURLからデータを取得
-url2 = 'https://www.data.jma.go.jp/obd/stats/etrn/view/daily_s1.php?prec_no=51&block_no=47636&year=2024&month=01&day=06&view=a1'
-temperature_data2, pressure_data2 = scrape_weather_data(url2)
-
-# データベースにデータを挿入
-insert_data_into_database(temperature_data1, 'temperature')
-insert_data_into_database(pressure_data1, 'pressure')
-insert_data_into_database(temperature_data2, 'temperature')
-insert_data_into_database(pressure_data2, 'pressure')
-
-
-import sqlite3
+    with sqlite3.connect('weather_data.db') as conn:
+        cursor = conn.cursor()
+        cursor.executemany(f'INSERT OR IGNORE INTO {table_name} VALUES (?, ?)', data)
 
 def read_data_from_database(table_name):
-    # SQLiteデータベースに接続
-    conn = sqlite3.connect('weather_data.db')
-    cursor = conn.cursor()
+    with sqlite3.connect('weather_data.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute(f'SELECT * FROM {table_name}')
+        return cursor.fetchall()
 
-    # データの取得
-    cursor.execute(f'SELECT * FROM {table_name}')
-    data = cursor.fetchall()
+# メインプログラム
+def main():
+    create_database()
 
-    # データベースをクローズ
-    conn.close()
+    # 1つ目からデータを取得
+    url1 = 'https://www.data.jma.go.jp/obd/stats/etrn/view/daily_s1.php?prec_no=44&block_no=47662&year=2023&month=12&day=&view=a2'
+    temperature_data1, pressure_data1 = scrape_weather_data(url1)
+    insert_data_into_database(temperature_data1, 'temperature')
+    insert_data_into_database(pressure_data1, 'pressure')
 
-    return data
+    # 2つ目からデータを取得
+    url2 = 'https://www.data.jma.go.jp/obd/stats/etrn/view/daily_s1.php?prec_no=51&block_no=47636&year=2024&month=01&day=06&view=a1'
+    temperature_data2, pressure_data2 = scrape_weather_data(url2)
+    insert_data_into_database(temperature_data2, 'temperature')
+    insert_data_into_database(pressure_data2, 'pressure')
 
-# データベースから気温データを取得して表示
-temperature_data = read_data_from_database('temperature')
-print("気温データ:")
-for row in temperature_data:
-    print(row)
-
-# データベースから気圧データを取得して表示
-pressure_data = read_data_from_database('pressure')
-print("\n気圧データ:")
-for row in pressure_data:
-    print(row)
+if __name__ == "__main__":
+    main()
