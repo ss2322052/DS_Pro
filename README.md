@@ -4,8 +4,8 @@
 
 ・データの構造
 1.気象庁のwebサイトから東京都(羽田)の12月の気象情報(気温、気圧)、愛知県(名古屋)の気象情報をスクレイピングする
-#　 東京都(羽田)のサイト: https://www.data.jma.go.jp/obd/stats/etrn/view/daily_s1.php?prec_no=44&block_no=47662&year=2023&month=12&day=&view=a2
-# 　愛知県(名古屋)のサイト:https://www.data.jma.go.jp/obd/stats/etrn/view/daily_s1.php?prec_no=51&block_no=47636&year=2024&month=01&day=06&view=a1
+  東京都(羽田)のサイト: https://www.data.jma.go.jp/obd/stats/etrn/view/daily_s1.php?prec_no=44&block_no=47662&year=2023&month=12&day=&view=a2
+  愛知県(名古屋)のサイト:https://www.data.jma.go.jp/obd/stats/etrn/view/daily_s1.php?prec_no=51&block_no=47636&year=2024&month=01&day=06&view=a1
 
 2.ローカルデータの収集
 　12月1日から1月7日までの睡眠時間を計測し、csvファイルへ保存
